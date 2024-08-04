@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Single Document Comparison</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    <style>
+         .text-yellow {
+        color: #ffc107;
+      }
+
+      .text-yellow:hover {
+        color: orange;
+      }
+
+        .dropdown-menu {
+            width: 200px; /* Adjust width for compactness */
+            font-size: 0.875rem; /* Adjust font size */
+        }
+        .dropdown-item {
+            padding: 0.5rem 1rem; /* Reduce padding */
+        }
+        .dropdown-divider {
+            margin: 0.5rem 0; /* Adjust margin */
+        }
+
+        .nav-item:hover .dropdown-menu {
+            display: block;
+        }
+
+        .d-none {
+            display: none;
+        }
+
+        .spinner-border {
+            display: inline-block;
+            width: 2rem;
+            height: 2rem;
+            vertical-align: text-bottom;
+            border: 0.25em solid currentColor;
+            border-right-color: transparent;
+            border-radius: 50%;
+            -webkit-animation: spinner-border 0.75s linear infinite;
+            animation: spinner-border 0.75s linear infinite;
+        }
+
+        @-webkit-keyframes spinner-border {
+            100% {
+                -webkit-transform: rotate(360deg);
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes spinner-border {
+            100% {
+                -webkit-transform: rotate(360deg);
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-white">
+
+    <!-- Navigation Bar -->
+    <header class="bg-blue-800 p-3 text-white flex justify-between items-center">
+        <a href="#" class="logo flex items-center mb-2 md:mb-0 no-underline">
+            <span class="text-xl font-bold ml-5">DocumentSA.</span>
+        </a>
+        <ul class="nav text-lg font-bold flex items-center space-x-4">
+            <li class="nav-item">
+                <a href="#about" class="nav-link text-white hover-yellow">About</a>
+            </li>
+            <li class="nav-item relative">
+                <a class="nav-link text-white hover-yellow cursor-pointer" id="documentComparisonDropdown">
+                    Document Comparison
+                </a>
+                <div class="dropdown-wrapper relative">
+                    <ul class="dropdown-menu hidden absolute bg-white text-black mt-1 rounded shadow-lg">
+                        <li><a class="dropdown-item block hover:bg-gray-200" href="{{ url_for('doubleComparison') }}">Double Document Comparison</a></li>
+                    </ul>
+                </div>
+            </li>
+            {% if 'username' in session %}
+            <li class="nav-item relative">
+                <a class="nav-link font-bold text-yellow cursor-pointer" id="userDropdown">
+                    Welcome, {{ session['username'][0:10] }}!
+                </a>
+                <div class="dropdown-wrapper relative">
+                    <ul class="dropdown-menu hidden absolute bg-white text-black mt-1 rounded shadow-lg">
+                        <li><a class="dropdown-item block hover:bg-gray-200" href="{{ url_for('profile') }}">Profile</a></li>
+                        <li><a class="dropdown-item block hover:bg-gray-200" href="{{ url_for('statistics') }}">Statistics</a></li>
+                        <li><a class="dropdown-item block hover:bg-gray-200" href="{{ url_for('change_username') }}">Change Username</a></li>
+                        <li><hr class="dropdown-divider my-1"></li>
+                        <li><a class="dropdown-item block bg-red-300 text-black font-bold hover:bg-red-400" href="{{ url_for('logout') }}"><i class="fa fa-power-off"></i> Logout</a></li>
+                    </ul>
+                </div>
+            </li>
+            {% else %}
+            <li class="nav-item">
+                <a class="nav-link text-white hover-yellow" href="{{ url_for('login') }}">Login</a>
+            </li>
+            {% endif %}
+        </ul>
+    </header>
+
+    <div class="container mx-auto my-10">
+        <!-- Single Document Comparison Section -->
+        <section id="singleDocComparison" class="mb-8">
+            <h1 class="text-2xl font-bold text-center text-blue-600">Single Document Similarity Checker</h1>
+            <div class="card shadow-md mt-4">
+                <div class="card-body p-6 bg-white rounded-lg">
+                    <form id="singleDocumentForm" method="POST" enctype="multipart/form-data" action="/singleComparison">
+                        <div class="mb-4">
+                            <label class="block text-gray-700 font-bold mb-2" for="singleInputDoc">Upload your doc</label>
+                            <input type="file" class="block w-full text-gray-700 border border-gray-300 rounded py-2 px-4" name="document" id="singleInputDoc">
+                        </div>
+                        <div id="singleFileInfo" class="text-gray-500"></div>
+                        <div class="mt-4">
+                            <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded hover:bg-blue-700" id="compareSingleDocBtn">Compare Docs</button>
+                        </div>
+                    </form>
+                </div>
+                <div id="singleResultsContainer" class="p-6">
+                    <div id="loadingSpinner" class="text-center hidden">
+                        <div class="spinner-border text-blue-600" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                    <div id="singleResults" class="hidden"></div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- About Section -->
+    <section id="about" class="container mx-auto mt-8 mb-8">
+        <h1 class="text-2xl font-bold text-center text-blue-600 mb-8">About Us</h1>
+        <div class="flex flex-wrap items-center justify-between">
+            <div class="w-full md:w-1/2">
+                <img src="{{ url_for('static', filename='Image/aboutUs.svg') }}" alt="About Us Image" class="w-full h-auto">
+            </div>
+            <div class="w-full md:w-1/2 md:pl-8 mt-8 md:mt-0">
+                <p class="text-2xl text-gray-700 text-justify">
+                    Our document comparison tool is a fantastic, lightweight tool that provides plagiarism checks between two documents. Whether you are a student, blogger, or publisher, this tool offers a great solution to detect and compare similarities between any two pieces of text. Utilize our tools for Single Document Similarity Checker and Double Document Similarity Checker. There is an FAQ at the bottom if you run into any issues when trying to use the tool.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer Section -->
+    <footer class="bg-blue-800 text-white text-center py-4 mt-8 font-bold">
+        <p>© 2024 Document Similarity Analysis Using NLP. All rights reserved.</p>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.2/mammoth.browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.0.6/dist/cdn.min.js" defer></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="{{ url_for('static', filename='/JS/single.js') }}"></script>
+    
+   
+</body>
+
+</html>

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center h-screen">
+    <div class="flex bg-white rounded-lg shadow-lg overflow-hidden w-3/4 max-w-4xl">
+        <div class="w-1/2 bg-blue-600 flex items-center justify-center p-12">
+            <img src="{{ url_for('static', filename='Image/My password-amico.svg') }}" alt="Login Image" class="h-64 w-auto" />
+        </div>
+        <div class="w-1/2 p-8">
+            <h2 class="text-3xl font-bold mb-4">Welcome back!</h2>
+            <p class="mb-4">To work with us, please sign in to your account and visit our website.</p>
+            <form method="post" action="{{ url_for('login') }}">
+                {{ form.hidden_tag() }}
+                <div class="mb-4">
+                    <label for="username" class="block mb-1">Username</label>
+                    {{ form.username(class_="w-full p-2 border border-gray-300 rounded", placeholder='i.e. ena tuni') }}
+                    {% for error in form.username.errors %}
+                    <span class="text-red-500">{{ error }}</span><br />
+                    {% endfor %}
+                </div>
+                <div class="mb-4 relative">
+                    <label for="password" class="block mb-1">Password</label>
+                    {{ form.password(class_="w-full p-2 border border-gray-300 rounded", placeholder='Enter your password', id='password') }}
+                    <button type="button" class="show-hide fas fa-eye absolute right-2 top-10 transform -translate-y-1/2 cursor-pointer text-black bg-none text-lg" onclick="togglePasswordVisibility('password', this)" aria-label="Toggle password visibility"></button>
+                    {% for error in form.password.errors %}
+                    <span class="text-red-500">{{ error }}</span><br />
+                    {% endfor %}
+                </div>
+                <input type="submit" value="Submit" class="w-full p-2 bg-blue-600 text-white rounded cursor-pointer hover:bg-blue-700" />
+            </form>
+            <div class="text-center mt-4">
+                Don't have an account?
+                <a href="{{ url_for('register') }}" class="text-blue-600 font-bold">Sign Up</a>.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function togglePasswordVisibility(passwordId, toggleIcon) {
+            var passwordInput = document.getElementById(passwordId);
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleIcon.classList.remove('fa-eye');
+                toggleIcon.classList.add('fa-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                toggleIcon.classList.remove('fa-eye-slash');
+                toggleIcon.classList.add('fa-eye');
+            }
+        }
+    </script>
+</body>
+</html>

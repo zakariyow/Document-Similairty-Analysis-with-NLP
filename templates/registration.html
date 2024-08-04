@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Registration</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      /* Tailwind CSS utility classes for flash messages */
+      .flash-message {
+        @apply fixed top-4 right-4 px-4 py-2 rounded-lg text-white shadow-lg z-50;
+      }
+      .flash-message.success {
+        @apply bg-green-500;
+      }
+      .flash-message.danger {
+        @apply bg-red-500;
+      }
+      .flash-message.info {
+        @apply bg-blue-500;
+      }
+      .flash-message .icon {
+        @apply mr-2;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-100 flex items-center justify-center h-screen">
+    <div
+      class="flex bg-white rounded-lg shadow-lg overflow-hidden w-3/4 max-w-4xl"
+    >
+      <div class="w-1/2 bg-blue-600 flex items-center justify-center p-12">
+        <img
+          src="static/Image/Sign up-cuate.svg"
+          alt="Registration Image"
+          class="h-64 w-auto"
+        />
+      </div>
+      <div class="w-1/2 p-8">
+        <h2 class="text-3xl font-bold mb-4">Join us today!</h2>
+        <p class="mb-4">
+          To start working together and unlock exclusive features, create an
+          account to access our website.
+        </p>
+        <form method="post" action="{{ url_for('register') }}">
+          {{ form.hidden_tag() }}
+          <div class="mb-4">
+            <label for="username" class="block mb-1">Username</label>
+            {{ form.username(class_="w-full p-2 border border-gray-300 rounded",
+            placeholder='Enter your username') }} {% for error in
+            form.username.errors %}
+            <span class="text-red-500">{{ error }}</span><br />
+            {% endfor %}
+          </div>
+          <div class="mb-4">
+            <label for="email" class="block mb-1">Email</label>
+            {{ form.email(class_="w-full p-2 border border-gray-300 rounded",
+            placeholder='e.g Hassanabdi@gmail.com') }} {% for error in
+            form.email.errors %}
+            <span class="text-red-500">{{ error }}</span><br />
+            {% endfor %}
+          </div>
+          <div class="mb-4 relative">
+            <label for="password" class="block mb-1">Password</label>
+            {{ form.password(class_="w-full p-2 border border-gray-300 rounded",
+            placeholder='Enter your password', id='password') }}
+            <button
+              type="button"
+              class="show-hide fas fa-eye absolute right-2 top-10 transform -translate-y-1/2 cursor-pointer text-black bg-none text-lg"
+              onclick="togglePasswordVisibility('password', this)"
+            ></button>
+            {% for error in form.password.errors %}
+            <span class="text-red-500">{{ error }}</span><br />
+            {% endfor %}
+          </div>
+          <div class="mb-4 relative">
+            <label for="confirm" class="block mb-1">Confirm Password</label>
+            {{ form.confirm(class_="w-full p-2 border border-gray-300 rounded",
+            placeholder='Confirm your password', id='confirm') }}
+            <button
+              type="button"
+              class="show-hide fas fa-eye absolute right-2 top-10 transform -translate-y-1/2 cursor-pointer text-black bg-none text-lg"
+              onclick="togglePasswordVisibility('confirm', this)"
+            ></button>
+            {% for error in form.confirm.errors %}
+            <span class="text-red-500">{{ error }}</span><br />
+            {% endfor %}
+          </div>
+          <input
+            type="submit"
+            value="Sign Up"
+            class="w-full p-2 bg-blue-600 text-white rounded cursor-pointer hover:bg-blue-700"
+          />
+        </form>
+        <div class="text-center mt-4">
+          Already have an account?
+          <a href="{{ url_for('login') }}" class="text-blue-600 font-bold"
+            >Login here</a
+          >
+        </div>
+      </div>
+    </div>
+
+    <div id="flash-message" class="flash-message hidden"></div>
+
+    <script>
+      function togglePasswordVisibility(passwordId, toggleIcon) {
+        var passwordInput = document.getElementById(passwordId);
+        if (passwordInput.type === 'password') {
+          passwordInput.type = 'text';
+          toggleIcon.classList.remove('fa-eye');
+          toggleIcon.classList.add('fa-eye-slash');
+        } else {
+          passwordInput.type = 'password';
+          toggleIcon.classList.remove('fa-eye-slash');
+          toggleIcon.classList.add('fa-eye');
+        }
+      }
+
+      // Function to show flash messages
+      function showFlashMessage(message, category) {
+        var flashDiv = document.getElementById('flash-message');
+        var iconClass = category === 'success' ? 'fa-check-circle' :
+                        category === 'danger' ? 'fa-exclamation-circle' :
+                        'fa-info-circle';  // Default to info icon
+
+        flashDiv.innerHTML = '<i class="fas ' + iconClass + ' icon"></i>' + message;
+        flashDiv.className = 'flash-message ' +
+            (category === 'success' ? 'bg-green-500' :
+             category === 'danger' ? 'bg-red-500' :
+             'bg-blue-500');  // Default to info color
+        flashDiv.style.display = 'flex';
+
+        setTimeout(function() {
+          flashDiv.style.display = 'none';
+        }, 5000);
+      }
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            showFlashMessage('{{ message }}', '{{ category }}');
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+    </script>
+  </body>
+</html>

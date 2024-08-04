@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>Change Username</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .alert-container {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 25%;
+            padding: 1rem;
+            z-index: 9999; /* Ensure the alerts are on top */
+        }
+        .alert {
+            opacity: 1;
+            transition: opacity 0.5s ease;
+        }
+        .alert.fade-out {
+            opacity: 0;
+        }
+    </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Select all alert elements
+            const alerts = document.querySelectorAll('.alert');
+            
+            alerts.forEach(alert => {
+                // Set a timeout to add the fade-out class after 3 seconds
+                setTimeout(() => {
+                    alert.classList.add('fade-out');
+                }, 3000); // Delay in milliseconds (3000ms = 3 seconds)
+            });
+        });
+    </script>
+</head>
+
+<body class="bg-gray-100 h-screen flex items-center justify-center">
+    <div class="alert-container">
+        <!-- Flash messages -->
+        {% with messages = get_flashed_messages(with_categories=True) %}
+            {% if messages %}
+                <div class="w-full">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} p-4 mb-4 rounded-lg text-white {{ 'bg-green-500' if category == 'success' else 'bg-red-500' }}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <div class="bg-white shadow-md rounded-lg w-96 h-auto flex flex-col justify-center items-center p-6 mt-16">
+        <h2 class="text-2xl font-bold mb-4">Change Username</h2>
+
+        <form method="POST" action="{{ url_for('change_username') }}" class="w-full">
+            {{ form.hidden_tag() }}
+            <div class="mb-4">
+                {{ form.new_username(class="form-input w-full border border-gray-300 rounded-md py-2 px-3 placeholder-gray-500", placeholder="Enter new username") }}
+            </div>
+            <button class="w-full bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600" type="submit">Update</button>
+        </form>
+        <a href="{{ url_for('index') }}" class="mt-4 text-blue-500 hover:underline font-bold">Back to Home</a>
+    </div>
+</body>
+
+</html>

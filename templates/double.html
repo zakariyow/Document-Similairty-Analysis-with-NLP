@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Double Document Comparison</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/tailwind.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;1,100;1,300;1,400&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      .common-word {
+        background-color: green;
+        color: white;
+      }
+
+      .different-word {
+        background-color: red;
+        color: white;
+      }
+
+      .text-yellow {
+        color: #ffc107;
+      }
+
+      .text-yellow:hover {
+        color: orange;
+      }
+      .dropdown-menu {
+        width: 150px; /* Adjust width as needed */
+        font-size: 0.875rem; /* Adjust font size for compactness */
+    }
+
+    .dropdown-item {
+        padding: 0.5rem 1rem; /* Reduce padding */
+    }
+
+    .dropdown-divider {
+        margin: 0.5rem 0; /* Adjust margin to reduce space */
+    }
+    </style>
+  </head>
+
+  <body class="bg-white">
+    <!-- Navigation Bar -->
+
+    <header
+      class="bg-blue-800 p-3 text-white flex justify-between items-center"
+    >
+      <a href="#" class="logo flex items-center mb-2 md:mb-0 no-underline">
+        <span class="text-xl font-bold ml-5">DocumentSA.</span>
+      </a>
+      <ul class="nav text-lg font-bold flex items-center space-x-4">
+        <li class="nav-item">
+          <a href="#about" class="nav-link text-white hover-yellow">About</a>
+        </li>
+        <li class="nav-item relative">
+          <a
+            class="nav-link text-white hover-yellow cursor-pointer"
+            id="documentComparisonDropdown"
+          >
+            Document Comparison
+          </a>
+          <div class="dropdown-wrapper relative">
+            <ul
+              class="dropdown-menu hidden absolute bg-white text-black mt-1 rounded shadow-lg"
+            >
+              <li>
+                <a
+                  class="dropdown-item block px-4 py-2 hover:bg-gray-200"
+                  href="{{ url_for('singleComparison') }}"
+                  >Single Document Comparison</a
+                >
+              </li>
+            </ul>
+          </div>
+        </li>
+        {% if 'username' in session %}
+        <!-- User Dropdown Menu -->
+        <li class="nav-item relative">
+          <a
+            class="nav-link font-bold text-yellow cursor-pointer"
+            id="userDropdown"
+          >
+            Welcome, {{ session['username'][0:10] }}!
+          </a>
+          <div class="dropdown-wrapper relative">
+            <ul
+              class="dropdown-menu hidden absolute bg-white text-black mt-1 rounded shadow-lg"
+            >
+              <li>
+                <a
+                  class="dropdown-item block px-2 py-1 hover:bg-gray-200"
+                  href="{{ url_for('profile') }}"
+                  >Profile</a
+                >
+              </li>
+              <li>
+                <a
+                  class="dropdown-item block px-2 py-1 hover:bg-gray-200"
+                  href="{{ url_for('statistics') }}"
+                  >Statistics</a
+                >
+              </li>
+              <li>
+                <a
+                  class="dropdown-item block px-2 py-1 hover:bg-gray-200"
+                  href="{{ url_for('change_username') }}"
+                  >Change Username</a
+                >
+              </li>
+              <li><hr class="dropdown-divider my-1" /></li>
+              <li>
+                <a
+                  class="dropdown-item block px-2 py-1 bg-red-300 text-black font-bold hover:bg-red-400"
+                  href="{{ url_for('logout') }}"
+                  ><i class="fa fa-power-off"></i> Logout</a
+                >
+              </li>
+            </ul>
+          </div>
+        </li>
+
+        {% else %}
+        <li class="nav-item">
+          <a
+            class="nav-link text-white hover-yellow"
+            href="{{ url_for('login') }}"
+            >Login</a
+          >
+        </li>
+        {% endif %}
+      </ul>
+    </header>
+
+    <!-- Document Comparison Section -->
+    <section id="doubleDocComparison" class="container mx-auto mt-10">
+      <h1 class="text-2xl font-bold text-center text-blue-600">
+        Double Document Similarity Checker
+      </h1>
+      <div class="card shadow-md mt-4">
+        <div class="card-body p-6 bg-white rounded-lg">
+          <form
+            id="doubleDocumentForm"
+            method="POST"
+            enctype="multipart/form-data"
+            action="/doubleComparison"
+          >
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+              <div>
+                <label
+                  class="block text-gray-700 font-bold mb-2"
+                  for="inputDoc1"
+                  >Upload Doc One</label
+                >
+                <input
+                  type="file"
+                  class="block w-full text-gray-700 border border-gray-300 rounded py-2 px-4"
+                  name="file1"
+                  id="inputDoc1"
+                />
+                <div id="fileInfo1" class="text-gray-500 mt-2"></div>
+              </div>
+
+              <div>
+                <label
+                  class="block text-gray-700 font-bold mb-2"
+                  for="inputDoc2"
+                  >Upload Doc Two</label
+                >
+                <input
+                  type="file"
+                  class="block w-full text-gray-700 border border-gray-300 rounded py-2 px-4"
+                  name="file2"
+                  id="inputDoc2"
+                />
+                <div id="fileInfo2" class="text-gray-500 mt-2"></div>
+              </div>
+            </div>
+            <div class="flex items-end justify-center">
+              <button
+                id="submitDocsBtn"
+                class="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded disabled:opacity-50"
+                disabled
+              >
+                Submit Files
+              </button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              <textarea
+                readonly
+                class="w-full resize-none h-64 p-4 border border-gray-300 rounded"
+                placeholder="Document 1 will display here"
+                id="displayDoc1"
+              ></textarea>
+              <textarea
+                readonly
+                class="w-full resize-none h-64 p-4 border border-gray-300 rounded"
+                placeholder="Document 2 will display here"
+                id="displayDoc2"
+              ></textarea>
+            </div>
+            <div class="mt-4">
+              <button
+                id="compareDocsBtn"
+                class="w-full bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded mt-4 disabled:opacity-50"
+                disabled
+              >
+                Compare Documents
+              </button>
+            </div>
+          </form>
+        </div>
+        <div id="resultsContainer" class="p-6"></div>
+      </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="container mx-auto mt-8 mb-8">
+      <h1 class="text-2xl font-bold text-center text-blue-600 mb-8">
+        About Us
+      </h1>
+      <div class="flex flex-wrap items-center justify-between">
+        <div class="w-full md:w-1/2">
+          <img
+            src="{{ url_for('static', filename='Image/aboutUs.svg') }}"
+            alt="About Us Image"
+            class="w-full h-auto"
+          />
+        </div>
+        <div class="w-full md:w-1/2 md:pl-8 mt-8 md:mt-0">
+          <p class="text-2xl text-gray-700 text-justify">
+            Our document comparison tool is a fantastic, lightweight tool that
+            provides plagiarism checks between two documents. Whether you are a
+            student, blogger, or publisher, this tool offers a great solution to
+            detect and compare similarities between any two pieces of text.
+            Utilize our tools for Single Document Similarity Checker and Double
+            Document Similarity Checker. There is an FAQ at the bottom if you
+            run into any issues when trying to use the tool.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer Section -->
+    <footer class="bg-blue-800 text-white text-center py-4 mt-8 font-bold">
+      <p>© 2024 Document Similarity Analysis Using NLP. All rights reserved.</p>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.2/mammoth.browser.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="{{ url_for('static', filename='/JS/double.js') }}"></script>
+     
+
+    <script></script>
+  </body>
+</html>

@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document Similarity Analysis Using NLP</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/tailwind.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;1,100;1,300;1,400&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Include Font Awesome CDN -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"
+    />
+
+    <style>
+      .common-word {
+        background-color: green;
+        color: white;
+      }
+
+      .different-word {
+        background-color: red;
+        color: white;
+      }
+
+      .text-yellow {
+        color: #ffc107;
+      }
+
+      .text-yellow:hover {
+        color: orange;
+      }
+
+      .dropdown-menu {
+        width: 150px; /* Adjust width as needed */
+        font-size: 0.875rem; /* Adjust font size for compactness */
+      }
+
+      .dropdown-item {
+        padding: 0.5rem 1rem; /* Reduce padding */
+      }
+
+      .dropdown-divider {
+        margin: 0.5rem 0; /* Adjust margin to reduce space */
+      }
+    </style>
+  </head>
+
+  <body class="bg-white">
+    <!-- Navigation Bar -->
+    <header
+      class="bg-blue-800 p-3 text-white flex justify-between items-center"
+    >
+      <a href="#" class="logo flex items-center mb-2 md:mb-0 no-underline">
+        <span class="text-xl font-bold ml-5">DocumentSA.</span>
+      </a>
+      <ul class="nav text-lg font-bold flex items-center space-x-4">
+        <li class="nav-item">
+          <a href="#hero" class="nav-link text-white hover:text-yellow-300"
+            >Home</a
+          >
+        </li>
+        <li class="nav-item">
+          <a href="#about" class="nav-link text-white hover:text-yellow-300"
+            >About</a
+          >
+        </li>
+        <li class="nav-item relative">
+          <a href="#" class="nav-link text-white hover:text-yellow-300 cursor-pointer" id="documentComparisonDropdown">
+            Document Comparison
+            <i class="fas fa-caret-down fa-sm"></i> <!-- Example of FontAwesome caret down icon -->
+          </a>
+          
+          <div class="dropdown-wrapper relative">
+            <ul
+              class="dropdown-menu hidden absolute bg-white text-black mt-1 rounded shadow-lg"
+            >
+              <li>
+                <a
+                  class="dropdown-item block px-4 py-2 leading-4 hover:bg-gray-200"
+                  href="{{ url_for('singleComparison') }}"
+                  >Single Document Comparison</a
+                >
+              </li>
+              <li>
+                <a
+                  class="dropdown-item block px-4 py-2 leading-4 hover:bg-gray-200"
+                  href="{{ url_for('doubleComparison') }}"
+                  >Double Document Comparison</a
+                >
+              </li>
+            </ul>
+          </div>
+        </li>
+        <li class="nav-item">
+          <a href="#features" class="nav-link text-white hover:text-yellow-300"
+            >Features</a
+          >
+        </li>
+        <li class="nav-item">
+          <a href="#ourTeam" class="nav-link text-white hover:text-yellow-300"
+            >Our Team</a
+          >
+        </li>
+        <li class="nav-item">
+          <a href="#FAQs" class="nav-link text-white hover:text-yellow-300"
+            >FAQs</a
+          >
+        </li>
+        {% if 'username' in session %}
+        <!-- User Dropdown Menu -->
+        <li class="nav-item relative">
+          <a
+            class="nav-link font-bold text-yellow cursor-pointer"
+            id="userDropdown"
+          >
+            Welcome, {{ session['username'][0:10] }}!
+          </a>
+          <div class="dropdown-wrapper relative">
+            <ul
+              class="dropdown-menu hidden absolute bg-white text-black mt-1 rounded shadow-lg"
+            >
+              <li>
+                <a
+                  class="dropdown-item block px-2 py-1 hover:bg-gray-200"
+                  href="{{ url_for('profile') }}"
+                  >Profile</a
+                >
+              </li>
+              <li>
+                <a
+                  class="dropdown-item block px-2 py-1 hover:bg-gray-200"
+                  href="{{ url_for('statistics') }}"
+                  >Statistics</a
+                >
+              </li>
+              <li>
+                <a
+                  class="dropdown-item block px-2 py-1 hover:bg-gray-200"
+                  href="{{ url_for('change_username') }}"
+                  >Change Username</a
+                >
+              </li>
+              <li><hr class="dropdown-divider my-1" /></li>
+              <li>
+                <a
+                  class="dropdown-item block px-2 py-1 bg-red-300 text-black font-bold hover:bg-red-400"
+                  href="{{ url_for('logout') }}"
+                  ><i class="fa fa-power-off"></i> Logout</a
+                >
+              </li>
+            </ul>
+          </div>
+        </li>
+        {% else %}
+        <li class="nav-item">
+          <a
+            class="nav-link text-white hover-yellow"
+            href="{{ url_for('login') }}"
+            >Login</a
+          >
+        </li>
+        {% endif %}
+      </ul>
+    </header>
+
+    <!-- Hero Section -->
+    <section
+      id="hero"
+      class="min-h-screen bg-white flex items-center justify-center"
+    >
+      <div
+        class="container mx-auto px-4 flex flex-col md:flex-row items-center"
+      >
+        <div class="text-center md:text-left md:w-1/2">
+          <h1 class="text-4xl font-bold mb-4">Document Comparison Made Easy</h1>
+          <p class="text-lg mb-6">
+            Utilize our tools for Single Document Similarity Checker and Double
+            Document Similarity Checker.
+          </p>
+        </div>
+        <div class="md:w-1/2 flex justify-center md:justify-end">
+          <img
+            src="{{ url_for('static', filename='Image/DocComparison.jpg') }}"
+            alt="Document Comparison Image"
+            class="w-96 h-auto md:w-full md:h-auto"
+          />
+        </div>
+      </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="container mx-auto mt-8 mb-8">
+      <h1 class="text-3xl font-bold text-center text-blue-600 mb-8">
+        About Us
+      </h1>
+      <div class="flex flex-wrap items-center justify-between">
+        <div class="w-full md:w-1/2">
+          <img
+            src="{{ url_for('static', filename='Image/aboutUs.svg') }}"
+            alt="About Us Image"
+            class="w-full h-auto"
+          />
+        </div>
+        <div class="w-full md:w-1/2 md:pl-8 mt-8 md:mt-0">
+          <p class="text-2xl text-gray-700 text-justify">
+            Our document comparison tool is a fantastic, lightweight tool that
+            provides plagiarism checks between two documents. Whether you are a
+            student, blogger, or publisher, this tool offers a great solution to
+            detect and compare similarities between any two pieces of text.
+            Utilize our tools for Single Document Similarity Checker and Double
+            Document Similarity Checker. There is an FAQ at the bottom if you
+            run into any issues when trying to use the tool.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Feature Section -->
+    <div class="py-12 bg-white" id="features">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="lg:text-center">
+          <h1
+            class="text-3xl text-indigo-600 font-semibold tracking-wide uppercase"
+          >
+            System Features
+          </h1>
+          <p
+            class="mt-2 text-2xl leading-8 font-extrabold tracking-tight text-gray-900 sm:text-4xl"
+          >
+            Document Similarity Analysis Using NLP
+          </p>
+        </div>
+
+        <div class="mt-10">
+          <dl
+            class="space-y-10 md:space-y-0 md:grid md:grid-cols-2 md:gap-x-8 md:gap-y-10"
+          >
+            <div class="relative">
+              <dt>
+                <div
+                  class="absolute flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white"
+                >
+                  <!-- Icon for Single Document Comparison -->
+                  <img
+                    src="{{ url_for('static', filename='Image/single-document-comparison-icon.png') }}"
+                    alt="Single Document Comparison Icon"
+                    class="h-6 w-6"
+                  />
+                </div>
+                <p class="ml-16 text-lg leading-6 font-medium text-gray-900">
+                  Single Document Comparison
+                </p>
+              </dt>
+              <dd class="mt-2 ml-16 text-base text-gray-500">
+                Users can upload a single document to be compared with a
+                database of existing documents. The system analyses and
+                highlights similarities and differences, providing a
+                comprehensive comparison report.
+              </dd>
+            </div>
+
+            <div class="relative">
+              <dt>
+                <div
+                  class="absolute flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white"
+                >
+                  <!-- Icon for Double Document Comparison -->
+                  <img
+                    src="{{ url_for('static', filename='Image/double-document-comparison-icon.png') }}"
+                    alt="Double Document Comparison Icon"
+                    class="h-6 w-6"
+                  />
+                </div>
+                <p class="ml-16 text-lg leading-6 font-medium text-gray-900">
+                  Double Document Comparison
+                </p>
+              </dt>
+              <dd class="mt-2 ml-16 text-base text-gray-500">
+                The system allows users to enter two documents and provides a
+                detailed analysis of the similarities between them. Similar
+                sections are highlighted, and the results display the unified
+                content of both documents as well as their differences.
+              </dd>
+            </div>
+
+            <div class="relative">
+              <dt>
+                <div
+                  class="absolute flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white"
+                >
+                  <!-- Icon for Text Cleaning and Pre-processing -->
+                  <img
+                    src="{{ url_for('static', filename='Image/data-preparation.png') }}"
+                    alt="Text Cleaning and Pre-processing Icon"
+                    class="h-6 w-6"
+                  />
+                </div>
+                <p class="ml-16 text-lg leading-6 font-medium text-gray-900">
+                  Text Cleaning and Pre-processing
+                </p>
+              </dt>
+              <dd class="mt-2 ml-16 text-base text-gray-500">
+                The system pre-processes the text data by removing punctuation,
+                special characters, and stop words to ensure accurate analysis.
+              </dd>
+            </div>
+
+            <div class="relative">
+              <dt>
+                <div
+                  class="absolute flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white"
+                >
+                  <!-- Icon for Tokenization and Vectorization -->
+                  <img
+                    src="{{ url_for('static', filename='Image/token.png') }}"
+                    alt="Tokenization and Vectorization Icon"
+                    class="h-6 w-6"
+                  />
+                </div>
+                <p class="ml-16 text-lg leading-6 font-medium text-gray-900">
+                  Tokenization and Vectorization
+                </p>
+              </dt>
+              <dd class="mt-2 ml-16 text-base text-gray-500">
+                The text is tokenized and vectorized using techniques such as
+                TF-IDF to facilitate similarity and bias detection.
+              </dd>
+            </div>
+
+            <div class="relative">
+              <dt>
+                <div
+                  class="absolute flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white"
+                >
+                  <!-- Icon for Similarity Score Calculation -->
+                  <img
+                    src="{{ url_for('static', filename='Image/similar.png') }}"
+                    alt="Similarity Score Calculation Icon"
+                    class="h-6 w-6"
+                  />
+                </div>
+                <p class="ml-16 text-lg leading-6 font-medium text-gray-900">
+                  Similarity Score Calculation
+                </p>
+              </dt>
+              <dd class="mt-2 ml-16 text-base text-gray-500">
+                The system calculates a similarity score between the uploaded
+                documents based on text content, structure, and other relevant
+                features.
+              </dd>
+            </div>
+
+            <div class="relative">
+              <dt>
+                <div
+                  class="absolute flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white"
+                >
+                  <!-- Icon for Highlighting Similar Sections -->
+                  <img
+                    src="{{ url_for('static', filename='Image/marker.png') }}"
+                    alt="Highlighting Similar Sections Icon"
+                    class="h-6 w-6"
+                  />
+                </div>
+                <p class="ml-16 text-lg leading-6 font-medium text-gray-900">
+                  Highlighting Similar Sections
+                </p>
+              </dt>
+              <dd class="mt-2 ml-16 text-base text-gray-500">
+                Similar sections within the compared documents are highlighted
+                to provide a clear visual representation of the overlapping
+                content.
+              </dd>
+            </div>
+
+            <div class="relative">
+              <dt>
+                <div
+                  class="absolute flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white"
+                >
+                  <!-- Icon for Difference Identification -->
+                  <img
+                    src="{{ url_for('static', filename='Image/is-not-equal-to.png') }}"
+                    alt="Difference Identification Icon"
+                    class="h-6 w-6"
+                  />
+                </div>
+                <p class="ml-16 text-lg leading-6 font-medium text-gray-900">
+                  Difference Identification
+                </p>
+              </dt>
+              <dd class="mt-2 ml-16 text-base text-gray-500">
+                The system identifies and highlights the differences between the
+                documents, allowing users to see unique sections in each
+                document.
+              </dd>
+            </div>
+
+            <div class="relative">
+              <dt>
+                <div
+                  class="absolute flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white"
+                >
+                  <!-- Icon for User Profiling -->
+                  <img
+                    src="{{ url_for('static', filename='Image/user.png') }}"
+                    alt="User Profiling Icon"
+                    class="h-6 w-6"
+                  />
+                </div>
+                <p class="ml-16 text-lg leading-6 font-medium text-gray-900">
+                  User Profiling
+                </p>
+              </dt>
+              <dd class="mt-2 ml-16 text-base text-gray-500">
+                The system tracks the number of attempts, successful
+                comparisons, and errors for both single and double document
+                comparisons. Users can also change their username within the
+                system.
+              </dd>
+            </div>
+          </dl>
+        </div>
+      </div>
+    </div>
+
+    <!-- Team Section Title -->
+    <section id="ourTeam" class="py-12 bg-white">
+      <div class="text-center mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">Meet Our Team</h1>
+        <h2 class="text-xl font-semibold text-gray-600 mt-2">
+          We are a group of passionate developers
+        </h2>
+      </div>
+
+      <!-- Team Section Cards -->
+      <div
+        class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-6"
+      >
+        <!-- Card 1 -->
+        <div
+          class="relative bg-white shadow-lg rounded-lg overflow-hidden group"
+        >
+          <img
+            src="{{ url_for('static', filename='Image/ME.jpg') }}"
+            alt="Lana Byrd"
+            class="w-full h-70 object-cover transform group-hover:scale-110 transition-transform duration-300"
+          />
+          <div
+            class="absolute bottom-0 w-full bg-gradient-to-t from-blue-100 to-transparent text-white opacity-0 hover:opacity-100 transition-opacity duration-300 p-4"
+          >
+            <h2 class="text-xl font-bold text-center">Zack Mohamed</h2>
+            <p class="text-center">Developer</p>
+            <div class="flex justify-center space-x-4 mt-2 text-2xl">
+              <a
+                href="https://www.facebook.com/profile.php?id=100059057316621"
+                class="text-blue-600 hover:text-blue-800"
+              >
+                <i class="fa fa-facebook-square" aria-hidden="true"></i>
+              </a>
+              <a
+                href="https://www.twitter.com"
+                class="text-blue-400 hover:text-blue-600"
+              >
+                <i class="fa fa-twitter-square" aria-hidden="true"></i>
+              </a>
+              <a
+                href="https://github.com/zakariyow"
+                class="text-gray-800 hover:text-gray-600"
+              >
+                <i class="fa fa-github-square" aria-hidden="true"></i>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2 -->
+        <div
+          class="relative bg-white shadow-lg rounded-lg overflow-hidden group"
+        >
+          <img
+            src="{{ url_for('static', filename='Image/Anas.jpg') }}"
+            alt="Karen Nelson"
+            class="w-full h-70 object-cover transform group-hover:scale-110 transition-transform duration-300"
+          />
+          <div
+            class="absolute bottom-0 w-full bg-gradient-to-t from-blue-100 to-transparent text-white opacity-0 hover:opacity-100 transition-opacity duration-300 p-4"
+          >
+            <h2 class="text-xl font-bold text-center">Anas Omer</h2>
+            <p class="text-center">Developer</p>
+            <div class="flex justify-center space-x-4 mt-2 text-2xl">
+              <a
+                href="https://www.facebook.com/Anas.Cumar.9400"
+                class="text-blue-600 hover:text-blue-800"
+              >
+                <i class="fa fa-facebook-square" aria-hidden="true"></i>
+              </a>
+              <a
+                href="https://x.com/AnasFiqi44?t=NuAZoF6jS_ZGfdMQCDk8eQ&s=09"
+                class="text-blue-400 hover:text-blue-600"
+              >
+                <i class="fa fa-twitter-square" aria-hidden="true"></i>
+              </a>
+              <a
+                href="https://www.github.com"
+                class="text-gray-800 hover:text-gray-600"
+              >
+                <i class="fa fa-github-square" aria-hidden="true"></i>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 3 -->
+        <div
+          class="relative bg-white shadow-lg rounded-lg overflow-hidden group"
+        >
+          <img
+            src="{{ url_for('static', filename='Image/Hassan.jpg') }}"
+            alt="Neil Sims"
+            class="w-full h-70 object-cover transform group-hover:scale-110 transition-transform duration-300"
+          />
+          <div
+            class="absolute bottom-0 w-full bg-gradient-to-t from-blue-100 to-transparent text-white opacity-0 hover:opacity-100 transition-opacity duration-300 p-4"
+          >
+            <h2 class="text-xl font-bold text-center">Hassan Abdi</h2>
+            <p class="text-center">Developer</p>
+            <div class="flex justify-center space-x-4 mt-2 text-2xl">
+              <a
+                href="https://www.facebook.com/keyow10"
+                class="text-blue-600 hover:text-blue-800"
+              >
+                <i class="fa fa-facebook-square" aria-hidden="true"></i>
+              </a>
+              <a
+                href="https://www.twitter.com"
+                class="text-blue-400 hover:text-blue-600"
+              >
+                <i class="fa fa-twitter-square" aria-hidden="true"></i>
+              </a>
+              <a
+                href="https://github.com/HassanBeyle"
+                class="text-gray-800 hover:text-gray-600"
+              >
+                <i class="fa fa-github-square" aria-hidden="true"></i>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 4 -->
+        <div
+          class="relative bg-white shadow-lg rounded-lg overflow-hidden group"
+        >
+          <img
+            src="{{ url_for('static', filename='Image/zacky.jpg') }}"
+            alt="Thomas Lean"
+            class="w-full h-70 object-cover transform group-hover:scale-110 transition-transform duration-300"
+          />
+          <div
+            class="absolute bottom-0 w-full bg-gradient-to-t from-blue-100 to-transparent text-white opacity-0 hover:opacity-100 transition-opacity duration-300 p-4"
+          >
+            <h2 class="text-xl font-bold text-center">Eng-Maxaad</h2>
+            <p class="text-center">Developer</p>
+            <div class="flex justify-center space-x-4 mt-2 text-2xl">
+              <a
+                href="https://www.facebook.com/zakariyeahmed.ugaas"
+                class="text-blue-600 hover:text-blue-800"
+              >
+                <i class="fa fa-facebook-square" aria-hidden="true"></i>
+              </a>
+              <a
+                href="https://twitter.com/Sacky_Ogas"
+                class="text-blue-400 hover:text-blue-600"
+              >
+                <i class="fa fa-twitter-square" aria-hidden="true"></i>
+              </a>
+              <a
+                href="https://github.com/ENG-MAXAAD"
+                class="text-gray-800 hover:text-gray-600"
+              >
+                <i class="fa fa-github-square" aria-hidden="true"></i>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ section -->
+    <h1
+      class="text-center mt-5 text-primary"
+      id="FAQs"
+      style="font-size: 32px; font-weight: bold"
+    >
+      Frequently Asked Questions (FAQs)
+    </h1>
+    <div class="mx-4 px-5 mt-2" id="basicAccordion">
+      <div x-data="{ open: false }" class="border border-gray-200 rounded mb-2">
+        <h2 class="accordion-header" id="headingOne">
+          <button
+            @click="open = !open"
+            class="w-full text-left py-2 px-4 bg-gray-100 hover:bg-gray-200 focus:outline-none"
+          >
+            <strong>What is document similarity?</strong>
+          </button>
+        </h2>
+        <div x-show="open" class="p-4">
+          Document similarity involves comparing the content of two or more
+          documents to determine how closely they are related in terms of their
+          subject matter, context, or composition. This is useful in various
+          applications such as plagiarism detection, information retrieval, and
+          data organization.
+        </div>
+      </div>
+      <div x-data="{ open: false }" class="border border-gray-200 rounded mb-2">
+        <h2 class="accordion-header" id="headingTwo">
+          <button
+            @click="open = !open"
+            class="w-full text-left py-2 px-4 bg-gray-100 hover:bg-gray-200 focus:outline-none"
+          >
+            <strong>How does the document similarity tool work?</strong>
+          </button>
+        </h2>
+        <div x-show="open" class="p-4">
+          Our tool uses advanced algorithms to analyze and compare texts. It
+          converts text into numerical data using techniques such as TF-IDF or
+          word embeddings, and then computes similarity scores based on these
+          numerical representations.
+        </div>
+      </div>
+      <div x-data="{ open: false }" class="border border-gray-200 rounded mb-2">
+        <h2 class="accordion-header" id="headingThree">
+          <button
+            @click="open = !open"
+            class="w-full text-left py-2 px-4 bg-gray-100 hover:bg-gray-200 focus:outline-none"
+          >
+            <strong>What types of documents can be analyzed?</strong>
+          </button>
+        </h2>
+        <div x-show="open" class="p-4">
+          Our tool is capable of analyzing any textual content, including
+          academic papers, articles, blog posts, and more. The documents can be
+          in plain text, PDF, or Word format.
+        </div>
+      </div>
+      <div x-data="{ open: false }" class="border border-gray-200 rounded mb-2">
+        <h2 class="accordion-header" id="headingFour">
+          <button
+            @click="open = !open"
+            class="w-full text-left py-2 px-4 bg-gray-100 hover:bg-gray-200 focus:outline-none"
+          >
+            <strong
+              >Is there a limit to the size of the documents I can
+              compare?</strong
+            >
+          </button>
+        </h2>
+        <div x-show="open" class="p-4">
+          Currently, the tool supports documents of up to 10,000 words each. If
+          your document exceeds this limit, consider summarizing it or focusing
+          on specific sections relevant to your comparison needs.
+        </div>
+      </div>
+      <div x-data="{ open: false }" class="border border-gray-200 rounded mb-2">
+        <h2 class="accordion-header" id="headingFive">
+          <button
+            @click="open = !open"
+            class="w-full text-left py-2 px-4 bg-gray-100 hover:bg-gray-200 focus:outline-none"
+          >
+            <strong>How accurate is the similarity detection?</strong>
+          </button>
+        </h2>
+        <div x-show="open" class="p-4">
+          The accuracy depends on the nature of the documents and the specific
+          algorithms used. Our tool is continuously refined to improve
+          precision, but complex texts or those with nuanced meanings might
+          present challenges.
+        </div>
+      </div>
+      <div x-data="{ open: false }" class="border border-gray-200 rounded mb-2">
+        <h2 class="accordion-header" id="headingSix">
+          <button
+            @click="open = !open"
+            class="w-full text-left py-2 px-4 bg-gray-100 hover:bg-gray-200 focus:outline-none"
+          >
+            <strong
+              >Can the tool detect similarities in documents in different
+              languages?</strong
+            >
+          </button>
+        </h2>
+        <div x-show="open" class="p-4">
+          Currently, our tool is optimized for documents in the Somali language.
+          Support for other languages may be added in future updates.
+        </div>
+      </div>
+      <div x-data="{ open: false }" class="border border-gray-200 rounded mb-2">
+        <h2 class="accordion-header" id="headingSeven">
+          <button
+            @click="open = !open"
+            class="w-full text-left py-2 px-4 bg-gray-100 hover:bg-gray-200 focus:outline-none"
+          >
+            <strong
+              >What should I do if I believe the similarity score is
+              incorrect?</strong
+            >
+          </button>
+        </h2>
+        <div x-show="open" class="p-4">
+          If you encounter unexpected results, double-check the documents for
+          any formatting issues or errors. You can also try rephrasing parts of
+          the text to see if the results change. For further assistance, please
+          contact our support team.
+        </div>
+      </div>
+      <div x-data="{ open: false }" class="border border-gray-200 rounded mb-2">
+        <h2 class="accordion-header" id="headingEight">
+          <button
+            @click="open = !open"
+            class="w-full text-left py-2 px-4 bg-gray-100 hover:bg-gray-200 focus:outline-none"
+          >
+            <strong>Is my data safe when using this tool?</strong>
+          </button>
+        </h2>
+        <div x-show="open" class="p-4">
+          Yes, your privacy is important to us. All documents uploaded to our
+          platform are handled securely and are not stored longer than necessary
+          to complete the analysis.
+        </div>
+      </div>
+      <div x-data="{ open: false }" class="border border-gray-200 rounded mb-2">
+        <h2 class="accordion-header" id="headingNine">
+          <button
+            @click="open = !open"
+            class="w-full text-left py-2 px-4 bg-gray-100 hover:bg-gray-200 focus:outline-none"
+          >
+            <strong
+              >Who can benefit from using this document similarity tool?</strong
+            >
+          </button>
+        </h2>
+        <div x-show="open" class="p-4">
+          This tool is ideal for educators, students, content creators, and
+          legal professionals who need to ensure the originality of written
+          content or to find similarities between different documents for
+          research, study, or legal reasons.
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-blue-800 text-white text-center py-4 mt-8 font-bold">
+      <p>© 2024 Document Similarity Analysis Using NLP. All rights reserved.</p>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.2/mammoth.browser.min.js"></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/alpinejs@3.0.6/dist/cdn.min.js"
+      defer
+    ></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="{{ url_for('static', filename='JS/main.js') }}"></script>
+  </body>
+</html>

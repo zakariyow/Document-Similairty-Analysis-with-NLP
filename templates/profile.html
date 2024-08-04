@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.1/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 50;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 600px;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .alert-container {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 25%;
+            padding: 1rem;
+            z-index: 9999; /* Ensure the alerts are on top */
+            display: none; /* Initially hide the alert container */
+        }
+        .alert {
+            opacity: 1;
+            transition: opacity 0.5s ease;
+        }
+        .alert.fade-out {
+            opacity: 0;
+        }
+    </style>
+</head>
+<body class="bg-blue-50 flex flex-col">
+
+    <header class="bg-blue-800 text-white p-4">
+        <nav class="container mx-auto flex justify-between items-center">
+            <a href="#" class="text-2xl font-bold text-yellow-400">DocumentSA</a>
+            <ul class="flex space-x-8">
+                <li><a class="text-lg font-bold px-4 py-2 hover:text-yellow-300 rounded transition duration-300" href="{{ url_for('index') }}">Home</a></li>
+                <li><a class="text-lg font-bold px-4 py-2 hover:text-yellow-300 rounded transition duration-300" href="{{ url_for('profile') }}">Profile</a></li>
+                <li><a class="text-lg font-bold px-4 py-2 hover:text-yellow-300 rounded transition duration-300" href="{{ url_for('statistics') }}">Statistics</a></li>
+                <li>
+                    <a class="inline-block font-bold px-4 py-2 text-white bg-red-500 rounded hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-300" href="{{ url_for('logout') }}">Logout</a>
+                </li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="flex-grow container mx-auto my-8 p-6 bg-white shadow-lg rounded-lg">
+        <!-- Flash messages -->
+        {% with messages = get_flashed_messages(with_categories=True) %}
+            {% if messages %}
+                <div class="alert-container" id="alertContainer">
+                    {% for category, message in messages %}
+                        <div class="p-4 mb-4 rounded-lg text-white {{ 'bg-green-500' if category == 'success' else 'bg-red-500' }} alert">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <h1 class="text-2xl font-bold text-gray-800 mb-4">User Profile</h1>
+        <div class="space-y-2 mb-4">
+            <p class="text-lg"><strong class="text-gray-600">Username:</strong> {{ user.username }}</p>
+            <p class="text-lg"><strong class="text-gray-600">Email:</strong> {{ user.email }}</p>
+        </div>
+        <button id="changeEmailBtn" class="inline-block px-6 py-2 text-white bg-blue-500 rounded hover:bg-blue-700">Change Email</button>
+        <button id="changePasswordBtn" class="inline-block px-6 py-2 text-white bg-blue-500 rounded hover:bg-blue-700 ml-2">Change Password</button>
+        <a class="inline-block px-6 py-2 text-white bg-blue-500 rounded hover:bg-blue-700 ml-2" href="{{ url_for('index') }}">Back to Home</a>
+    </main>
+
+    <footer class="bg-blue-800 text-white text-center py-4 mt-8 font-bold">
+        <p>© 2024 Document Similarity Analysis Using NLP. All rights reserved.</p>
+    </footer>
+
+    <!-- Change Email Modal -->
+    <div id="changeEmailModal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="closeEmailModal">&times;</span>
+            <h2 class="text-2xl font-bold mb-4">Change Email</h2>
+            <form action="{{ url_for('change_email') }}" method="post">
+                <div class="mb-4">
+                    <label for="new_email" class="block text-gray-700 font-bold mb-2">New Email:</label>
+                    <input type="email" id="new_email" name="new_email" class="w-full p-2 border border-gray-300 rounded-lg" required>
+                </div>
+                <button type="submit" class="inline-block px-6 py-2 text-white bg-blue-500 rounded hover:bg-blue-700">Update Email</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div id="changePasswordModal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="closePasswordModal">&times;</span>
+            <h2 class="text-2xl font-bold mb-4">Change Password</h2>
+            <form action="{{ url_for('change_password') }}" method="post">
+                <div class="mb-4">
+                    <label for="current_password" class="block text-gray-700 font-bold mb-2">Current Password:</label>
+                    <input type="password" id="current_password" name="current_password" class="w-full p-2 border border-gray-300 rounded-lg" required>
+                </div>
+                <div class="mb-4">
+                    <label for="new_password" class="block text-gray-700 font-bold mb-2">New Password:</label>
+                    <input type="password" id="new_password" name="new_password" class="w-full p-2 border border-gray-300 rounded-lg" required>
+                </div>
+                <div class="mb-4">
+                    <label for="confirm_new" class="block text-gray-700 font-bold mb-2">Confirm New Password:</label>
+                    <input type="password" id="confirm_new" name="confirm_new" class="w-full p-2 border border-gray-300 rounded-lg" required>
+                </div>
+                <button type="submit" class="inline-block px-6 py-2 text-white bg-blue-500 rounded hover:bg-blue-700">Update Password</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Alerts -->
+    <div id="alertContainer" class="alert-container"></div>
+
+    <script>
+        // Ensure the JavaScript runs after the DOM is fully loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            // Function to show alerts
+            function showAlert(message, type) {
+                const alertContainer = document.getElementById('alertContainer');
+                const alertDiv = document.createElement('div');
+                alertDiv.className = `p-4 mb-4 rounded-lg text-white ${type === 'success' ? 'bg-green-500' : 'bg-red-500'} alert`;
+                alertDiv.textContent = message;
+                alertContainer.appendChild(alertDiv);
+
+                // Show alert
+                alertContainer.style.display = 'block';
+
+                // Hide alert after 5 seconds
+                setTimeout(() => {
+                    alertDiv.classList.add('fade-out');
+                    setTimeout(() => {
+                        alertContainer.removeChild(alertDiv);
+                        if (alertContainer.children.length === 0) {
+                            alertContainer.style.display = 'none';
+                        }
+                    }, 500); // Allow time for fade-out transition
+                }, 5000); // Alert duration
+            }
+
+            // Example usage of showAlert
+            // showAlert('Your action was successful!', 'success');
+            // showAlert('An error occurred.', 'error');
+        });
+
+        // Get the modals
+        var changeEmailModal = document.getElementById("changeEmailModal");
+        var changePasswordModal = document.getElementById("changePasswordModal");
+
+        // Get the buttons that open the modals
+        var changeEmailBtn = document.getElementById("changeEmailBtn");
+        var changePasswordBtn = document.getElementById("changePasswordBtn");
+
+        // Get the <span> elements that close the modals
+        var closeEmailModal = document.getElementById("closeEmailModal");
+        var closePasswordModal = document.getElementById("closePasswordModal");
+
+        // When the user clicks the button, open the modal
+        changeEmailBtn.onclick = function() {
+            changeEmailModal.style.display = "block";
+        }
+        changePasswordBtn.onclick = function() {
+            changePasswordModal.style.display = "block";
+        }
+
+        // When the user clicks on <span> (x), close the modal
+        closeEmailModal.onclick = function() {
+            changeEmailModal.style.display = "none";
+        }
+        closePasswordModal.onclick = function() {
+            changePasswordModal.style.display = "none";
+        }
+
+        // When the user clicks anywhere outside of the modal, close it
+        window.onclick = function(event) {
+            if (event.target == changeEmailModal) {
+                changeEmailModal.style.display = "none";
+            }
+            if (event.target == changePasswordModal) {
+                changePasswordModal.style.display = "none";
+            }
+        }
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</body>
+</html>
