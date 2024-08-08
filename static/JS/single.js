@@ -1,27 +1,27 @@
 // Toggle dropdowns
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     const dropdowns = document.querySelectorAll('.dropdown-wrapper');
 
     dropdowns.forEach(dropdown => {
         const toggleButton = dropdown.previousElementSibling;
         const menu = dropdown.querySelector('.dropdown-menu');
 
-        toggleButton.addEventListener('click', function(event) {
+        toggleButton.addEventListener('click', function (event) {
             event.stopPropagation(); // Prevent click event from bubbling up
             menu.classList.toggle('hidden');
         });
 
-        document.addEventListener('click', function(event) {
+        document.addEventListener('click', function (event) {
             if (!dropdown.contains(event.target)) {
                 menu.classList.add('hidden');
             }
         });
 
-        dropdown.addEventListener('mouseover', function() {
+        dropdown.addEventListener('mouseover', function () {
             menu.classList.remove('hidden');
         });
 
-        dropdown.addEventListener('mouseleave', function() {
+        dropdown.addEventListener('mouseleave', function () {
             menu.classList.add('hidden');
         });
     });
@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', function() {
 const fileInput = document.getElementById('singleInputDoc');
 const submitButton = document.getElementById('compareSingleDocBtn');
 
-fileInput.addEventListener('change', function() {
+fileInput.addEventListener('change', function () {
     if (fileInput.files.length === 0) {
         submitButton.disabled = true;
         toastr.error('No file selected. Please choose a file to upload.', 'Error', { timeOut: 5000 });
@@ -39,28 +39,31 @@ fileInput.addEventListener('change', function() {
     }
 });
 
-submitButton.addEventListener('click', function(event) {
+submitButton.addEventListener('click', function (event) {
     if (fileInput.files.length === 0) {
         toastr.error('No file selected. Please choose a file to upload.', 'Error', { timeOut: 5000 });
         event.preventDefault(); // Prevent form submission if no file is selected
     }
 });
 
-document.getElementById('singleDocumentForm').addEventListener('submit', async function(event) {
+document.getElementById('singleDocumentForm').addEventListener('submit', async function (event) {
     event.preventDefault();
 
     const file = fileInput.files[0];
     if (!file) {
         toastr.error('No file selected. Please select a file before submitting.', 'Error', { timeOut: 5000 });
-        document.getElementById('loadingSpinner').classList.add('hidden'); // Ensure spinner is hidden if no file is selected
         return;
     }
 
     const formData = new FormData();
     formData.append('document', file);
     document.getElementById('singleResultsContainer').classList.add('hidden');
-    document.getElementById('loadingSpinner').classList.remove('hidden'); // Show the loading spinner
     toastr.info('Processing your document...', 'Processing', { timeOut: 5000 });
+
+    // Show the loading spinner
+    const spinner = document.createElement('div');
+    spinner.className = 'spinner mx-auto my-4';
+    document.getElementById('singleDocComparison').appendChild(spinner);
 
     try {
         const response = await fetch('/singleComparison', {
@@ -79,8 +82,9 @@ document.getElementById('singleDocumentForm').addEventListener('submit', async f
     } catch (error) {
         toastr.error('Network or server issue. Please try again later.', 'Error', { timeOut: 5000 });
     } finally {
-        document.getElementById('loadingSpinner').classList.add('hidden'); // Hide the spinner
         document.getElementById('singleResultsContainer').classList.remove('hidden'); // Show the results container
+        // Remove the loading spinner
+        spinner.remove();
     }
 });
 
@@ -138,8 +142,3 @@ function displaySingleResults(result) {
     singleResultsContainer.classList.remove('hidden');
     toastr.success('Document processed successfully!', 'Success', { timeOut: 5000 });
 }
-
-
-
-
-

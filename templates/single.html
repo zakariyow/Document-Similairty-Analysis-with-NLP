@@ -8,23 +8,29 @@
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
     <style>
-         .text-yellow {
-        color: #ffc107;
-      }
+        .text-yellow {
+            color: #ffc107;
+        }
 
-      .text-yellow:hover {
-        color: orange;
-      }
+        .text-yellow:hover {
+            color: orange;
+        }
 
         .dropdown-menu {
-            width: 200px; /* Adjust width for compactness */
-            font-size: 0.875rem; /* Adjust font size */
+            width: 200px;
+            /* Adjust width for compactness */
+            font-size: 0.875rem;
+            /* Adjust font size */
         }
+
         .dropdown-item {
-            padding: 0.5rem 1rem; /* Reduce padding */
+            padding: 0.5rem 1rem;
+            /* Reduce padding */
         }
+
         .dropdown-divider {
-            margin: 0.5rem 0; /* Adjust margin */
+            margin: 0.5rem 0;
+            /* Adjust margin */
         }
 
         .nav-item:hover .dropdown-menu {
@@ -35,28 +41,21 @@
             display: none;
         }
 
-        .spinner-border {
-            display: inline-block;
-            width: 2rem;
-            height: 2rem;
-            vertical-align: text-bottom;
-            border: 0.25em solid currentColor;
-            border-right-color: transparent;
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
-            -webkit-animation: spinner-border 0.75s linear infinite;
-            animation: spinner-border 0.75s linear infinite;
+            border-left-color: #09f;
+            animation: spin 1s linear infinite;
         }
 
-        @-webkit-keyframes spinner-border {
-            100% {
-                -webkit-transform: rotate(360deg);
-                transform: rotate(360deg);
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
             }
-        }
 
-        @keyframes spinner-border {
             100% {
-                -webkit-transform: rotate(360deg);
                 transform: rotate(360deg);
             }
         }
@@ -94,7 +93,9 @@
                         <li><a class="dropdown-item block hover:bg-gray-200" href="{{ url_for('profile') }}">Profile</a></li>
                         <li><a class="dropdown-item block hover:bg-gray-200" href="{{ url_for('statistics') }}">Statistics</a></li>
                         <li><a class="dropdown-item block hover:bg-gray-200" href="{{ url_for('change_username') }}">Change Username</a></li>
-                        <li><hr class="dropdown-divider my-1"></li>
+                        <li>
+                            <hr class="dropdown-divider my-1">
+                        </li>
                         <li><a class="dropdown-item block bg-red-300 text-black font-bold hover:bg-red-400" href="{{ url_for('logout') }}"><i class="fa fa-power-off"></i> Logout</a></li>
                     </ul>
                 </div>
@@ -124,12 +125,7 @@
                         </div>
                     </form>
                 </div>
-                <div id="singleResultsContainer" class="p-6">
-                    <div id="loadingSpinner" class="text-center hidden">
-                        <div class="spinner-border text-blue-600" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
-                    </div>
+                <div id="singleResultsContainer" class="p-6 hidden">
                     <div id="singleResults" class="hidden"></div>
                 </div>
             </div>
@@ -164,7 +160,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="{{ url_for('static', filename='/JS/single.js') }}"></script>
     
-   
 </body>
 
 </html>
