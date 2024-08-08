@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,11 +8,13 @@
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@latest/dist/tailwind.min.css" rel="stylesheet">
     <style>
         /* Ensure the body takes up the full height of the viewport */
-        html, body {
+        html,
+        body {
             height: 100%;
         }
     </style>
 </head>
+
 <body class="bg-gray-100 flex flex-col">
 
     <header class="bg-blue-800 text-white p-4">
@@ -22,12 +25,16 @@
             </a>
             <!-- Navigation Links -->
             <ul class="flex space-x-8">
-                <li><a class="text-lg font-bold px-4 py-2 hover:text-yellow-300 rounded transition duration-300" href="{{ url_for('index') }}">Home</a></li>
-                <li><a class="text-lg font-bold px-4 py-2 hover:text-yellow-300 rounded transition duration-300" href="{{ url_for('profile') }}">Profile</a></li>
-                <li><a class="text-lg font-bold px-4 py-2 hover:text-yellow-300 rounded transition duration-300" href="{{ url_for('statistics') }}">Statistics</a></li>
+                <li><a class="text-lg font-bold px-4 py-2 hover:text-yellow-300 rounded transition duration-300"
+                        href="{{ url_for('index') }}">Home</a></li>
+                <li><a class="text-lg font-bold px-4 py-2 hover:text-yellow-300 rounded transition duration-300"
+                        href="{{ url_for('profile') }}">Profile</a></li>
+                <li><a class="text-lg font-bold px-4 py-2 hover:text-yellow-300 rounded transition duration-300"
+                        href="{{ url_for('statistics') }}">Statistics</a></li>
                 <li>
                     <!-- Logout Button -->
-                    <a class="inline-block font-bold px-4 py-2 text-white bg-red-500 rounded hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-300" href="{{ url_for('logout') }}">
+                    <a class="inline-block font-bold px-4 py-2 text-white bg-red-500 rounded hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-300"
+                        href="{{ url_for('logout') }}">
                         Logout
                     </a>
                 </li>
@@ -39,8 +46,38 @@
         <h1 class="text-2xl font-bold text-gray-800 mb-4">Statistics</h1>
 
         <div class="flex mb-6">
-            <button id="showAll" class="mr-4 inline-block px-6 py-2 text-white bg-blue-500 rounded hover:bg-blue-700">Comparison Info Details</button>
-            <button id="showSummary" class="inline-block px-6 py-2 text-white bg-blue-500 rounded hover:bg-blue-700">All Comparisons</button>
+            <button id="showAll"
+                class="mr-4 inline-block px-6 py-2 text-white bg-blue-500 rounded hover:bg-blue-700">Comparison Info
+                Details</button>
+            <button id="showSummary"
+                class="inline-block px-6 py-2 text-white bg-blue-500 rounded hover:bg-blue-700">All Comparisons</button>
+        </div>
+
+        <!-- Date Range Picker Section (Initially Hidden) -->
+        <div id="dateRangeSection" class="bg-gray-800 p-6 rounded-lg mb-6 hidden">
+            <select id="dateRange" name="dateRange"
+                class="block w-full bg-gray-900 text-white p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2">
+                <option value="all_dates">All Dates</option>
+                <option value="today">Today</option>
+                <option value="this_week">This Week</option>
+                <option value="this_month">This Month</option>
+                <option value="custom">Custom Range</option>
+            </select>
+            <div class="flex space-x-4">
+                <input type="date" id="fromDate" name="fromDate"
+                    class="bg-gray-900 text-white p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value="2024-08-09">
+                <input type="date" id="toDate" name="toDate"
+                    class="bg-gray-900 text-white p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value="2024-08-09">
+            </div>
+            <button id="generateButton"
+                class="mt-4 w-full py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition duration-300">Generate</button>
+        </div>
+
+        <!-- No Data Message -->
+        <div id="noDataMessage" class="hidden bg-yellow-200 text-yellow-800 p-4 rounded-lg mb-6">
+            No data available for the selected date range.
         </div>
 
         <!-- Statistics Table -->
@@ -59,7 +96,7 @@
                         <th class="py-3 px-6 border-b">Upload Date</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="statsTableBody">
                     {% for stat in stats %}
                     <tr class="hover:bg-gray-100">
                         <td class="py-3 px-6 border-b" data-all>{{ stat.document_name }}</td>
@@ -76,22 +113,27 @@
                 </tbody>
             </table>
         </div>
-        <a class="inline-block px-6 py-2 text-white bg-blue-500 rounded hover:bg-blue-700 mt-4" href="{{ url_for('index') }}">Back to Home</a>
+        <a class="inline-block px-6 py-2 text-white bg-blue-500 rounded hover:bg-blue-700 mt-4"
+            href="{{ url_for('index') }}">Back to Home</a>
     </main>
 
-    <footer class="bg-blue-800 text-white text-center py-4 mt-8 font-bold">
+    <footer class="bg-blue-600 text-white text-center py-4 mt-8 font-bold">
         <p>© 2024 Document Similarity Analysis Using NLP. All rights reserved.</p>
     </footer>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         // JavaScript to toggle between showing all details and summary
-        document.getElementById('showAll').addEventListener('click', function() {
+        document.getElementById('showAll').addEventListener('click', function () {
+            document.getElementById('dateRangeSection').classList.remove('hidden');
             document.getElementById('statsTable').classList.remove('hidden');
+            document.getElementById('noDataMessage').classList.add('hidden');
             document.querySelectorAll('[data-all]').forEach(el => el.style.display = '');
         });
 
-        document.getElementById('showSummary').addEventListener('click', function() {
+        document.getElementById('showSummary').addEventListener('click', function () {
+            document.getElementById('dateRangeSection').classList.add('hidden');
             document.getElementById('statsTable').classList.remove('hidden');
+            document.getElementById('noDataMessage').classList.add('hidden');
             document.querySelectorAll('[data-all]').forEach(el => el.style.display = 'none');
             document.querySelectorAll('th, td').forEach(el => {
                 if (el.textContent.trim() === 'Description' ||
@@ -101,6 +143,75 @@
                 }
             });
         });
+
+        // Toggle date inputs based on select option
+        document.getElementById('dateRange').addEventListener('change', function () {
+            var customRange = document.getElementById('dateRange').value === 'custom';
+            document.getElementById('fromDate').disabled = !customRange;
+            document.getElementById('toDate').disabled = !customRange;
+        });
+
+        // Initially disable the date inputs
+        document.getElementById('fromDate').disabled = true;
+        document.getElementById('toDate').disabled = true;
+
+        document.getElementById('generateButton').addEventListener('click', function () {
+            updateTableData(document.getElementById('dateRange').value);
+        });
+
+        function updateTableData(dateRange) {
+            // Simulate filtering the table data based on the selected date range
+            const statsTableBody = document.getElementById('statsTableBody');
+            const rows = statsTableBody.getElementsByTagName('tr');
+            let hasData = false;
+
+            // Show or hide rows based on the date range (mock filtering logic)
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                const uploadDate = new Date(row.cells[8].innerText.trim()); // Assuming upload date is in the 9th cell
+                let showRow = false;
+
+                switch (dateRange) {
+                    case 'all_dates':
+                        showRow = true;
+                        break;
+                    case 'today':
+                        const today = new Date();
+                        showRow = uploadDate.toDateString() === today.toDateString();
+                        break;
+                    case 'this_week':
+                        const now = new Date();
+                        const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
+                        const endOfWeek = new Date(now.setDate(now.getDate() - now.getDay() + 6));
+                        showRow = uploadDate >= startOfWeek && uploadDate <= endOfWeek;
+                        break;
+                    case 'this_month':
+                        const currentMonth = new Date().getMonth();
+                        showRow = uploadDate.getMonth() === currentMonth;
+                        break;
+                    case 'custom':
+                        const fromDate = new Date(document.getElementById('fromDate').value);
+                        const toDate = new Date(document.getElementById('toDate').value);
+                        showRow = uploadDate >= fromDate && uploadDate <= toDate;
+                        break;
+                }
+
+                if (showRow) {
+                    row.classList.remove('hidden');
+                    hasData = true;
+                } else {
+                    row.classList.add('hidden');
+                }
+            }
+
+            // Show or hide no data message
+            if (hasData) {
+                document.getElementById('noDataMessage').classList.add('hidden');
+            } else {
+                document.getElementById('noDataMessage').classList.remove('hidden');
+            }
+        }
     </script>
 </body>
+
 </html>

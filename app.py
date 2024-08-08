@@ -65,32 +65,6 @@ def get_bert_embedding_double(text, tokenizer, model, device):
         outputs = model(**inputs)
     return outputs.last_hidden_state.mean(dim=1).squeeze()
 
-# Common functions
-def update_comparison_stats(user_id, comparison_type, success, error):
-    cur = mysql.connection.cursor()
-    # Check if record exists for the user and comparison type
-    result = cur.execute("SELECT * FROM comparison_stats WHERE user_id = %s AND comparison_type = %s", (user_id, comparison_type))
-    
-    if result > 0:
-        stats = cur.fetchone()
-        # Update the existing record
-        cur.execute("""
-            UPDATE comparison_stats
-            SET attempts = attempts + 1, 
-                successes = successes + %s,
-                errors = errors + %s
-            WHERE user_id = %s AND comparison_type = %s
-        """, (1 if success else 0, 1 if error else 0, user_id, comparison_type))
-    else:
-        # Create a new record
-        cur.execute("""
-            INSERT INTO comparison_stats (user_id, comparison_type, attempts, successes, errors)
-            VALUES (%s, %s, %s, %s, %s)
-        """, (user_id, comparison_type, 1, 1 if success else 0, 1 if error else 0))
-    
-    mysql.connection.commit()
-    cur.close()
-
 # Function to detect file encoding
 def detect_encoding(file_path):
     with open(file_path, 'rb') as f:
@@ -218,7 +192,6 @@ def singleComparison():
 
         if 'document' not in request.files:
             errors = "No file part"
-            update_comparison_stats(session['user_id'], 'single', False, True)
             return jsonify({"error": errors}), 400
 
         file = request.files['document']
@@ -227,7 +200,6 @@ def singleComparison():
 
         if file.filename == '':
             errors = "No selected file"
-            update_comparison_stats(session['user_id'], 'single', False, True)
             return jsonify({"error": errors}), 400
 
         if file and allowed_file(file.filename):
@@ -265,9 +237,8 @@ def singleComparison():
                 }
 
                 success = True
-                update_comparison_stats(session['user_id'], 'single', True, False)
 
-                # Insert data into database
+                # Insert data into the comparison_info table
                 cur = mysql.connection.cursor()
                 cur.execute("""
                     INSERT INTO comparison_info (user_id, comparison_type, document_name, document_format, attempts, success, errors, similarity_results, description)
@@ -279,16 +250,30 @@ def singleComparison():
                 return jsonify(results)
             except Exception as e:
                 errors = str(e)
-                update_comparison_stats(session['user_id'], 'single', False, True)
+                # Insert error data into the comparison_info table
+                cur = mysql.connection.cursor()
+                cur.execute("""
+                    INSERT INTO comparison_info (user_id, comparison_type, document_name, document_format, attempts, success, errors, similarity_results, description)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """, (session['user_id'], 'single', document_name, document_format, attempts, False, errors, similarity_results, description))
+                mysql.connection.commit()
+                cur.close()
                 return jsonify({"error": errors}), 400
         else:
             errors = "Invalid file type. Only pdf, docx, and txt are allowed."
-            update_comparison_stats(session['user_id'], 'single', False, True)
+            # Insert error data into the comparison_info table
+            cur = mysql.connection.cursor()
+            cur.execute("""
+                INSERT INTO comparison_info (user_id, comparison_type, document_name, document_format, attempts, success, errors, similarity_results, description)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (session['user_id'], 'single', document_name, document_format, attempts, False, errors, similarity_results, description))
+            mysql.connection.commit()
+            cur.close()
             return jsonify({"error": errors}), 400
 
     return render_template('single.html')
 
- 
+
 
 # Ensure the results are consistent by setting the seed
 DetectorFactory.seed = 0
@@ -298,8 +283,6 @@ def detect_language(text):
         return detect(text)
     except:
         return None
-
-
 @app.route('/doubleComparison', methods=['GET', 'POST'])
 @login_required
 def doubleComparison():
@@ -314,12 +297,10 @@ def doubleComparison():
 
         if not file1 or not file2:
             errors = "Both files are required."
-            update_comparison_stats(session['user_id'], 'double', False, True)
             return jsonify({"error": errors}), 400
 
         if not allowed_file(file1.filename) or not allowed_file(file2.filename):
             errors = "Invalid file type. Only pdf, docx, and txt are allowed."
-            update_comparison_stats(session['user_id'], 'double', False, True)
             return jsonify({"error": errors}), 400
 
         try:
@@ -362,8 +343,8 @@ def doubleComparison():
             }
 
             success = True
-            update_comparison_stats(session['user_id'], 'double', True, False)
 
+            # Insert data into the comparison_info table
             cur = mysql.connection.cursor()
             cur.execute("""
                 INSERT INTO comparison_info (user_id, comparison_type, document_name, document_format, attempts, success, errors, similarity_results, description)
@@ -377,13 +358,21 @@ def doubleComparison():
             return jsonify(results)
         except Exception as e:
             errors = str(e)
-            update_comparison_stats(session['user_id'], 'double', False, True)
+            # Insert error data into the comparison_info table
+            cur = mysql.connection.cursor()
+            cur.execute("""
+                INSERT INTO comparison_info (user_id, comparison_type, document_name, document_format, attempts, success, errors, similarity_results, description)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (session['user_id'], 'double', f"{file1.filename}, {file2.filename}",
+                  f"{file1.filename.split('.')[-1]}, {file2.filename.split('.')[-1]}",
+                  attempts, False, errors, similarity_results, description))
+            mysql.connection.commit()
+            cur.close()
             return jsonify({"error": errors}), 400
 
     return render_template('double.html')
 
 # Authentication and user management routes
- 
 # Define the form
 class UserRegisterForm(FlaskForm):
     username = StringField('Username', validators=[
@@ -404,7 +393,6 @@ class UserRegisterForm(FlaskForm):
         InputRequired(message='Please confirm your password.')
     ])
 
-
 class UserLoginForm(FlaskForm):
     username = StringField('Username', validators=[
         InputRequired(message='Username is required.'),
@@ -414,7 +402,6 @@ class UserLoginForm(FlaskForm):
         InputRequired(message='Password is required.'),
         Length(min=6, max=35, message='Password must be between 6 and 35 characters long.')
     ])
-
 
 class ChangeUsernameForm(FlaskForm):
     new_username = StringField('New Username', validators=[
@@ -487,7 +474,6 @@ def register():
 
     return render_template('registration.html', form=form)
 
-
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     form = UserLoginForm(request.form)
@@ -536,15 +522,28 @@ def profile():
 
     return render_template('profile.html', user=user)
 
+from datetime import datetime
+from flask import render_template, request, session, flash
+
 @app.route('/statistics', methods=['GET', 'POST'])
 def statistics():
     if 'user_id' not in session:
         flash('Please log in to view your statistics', 'danger')
         return redirect(url_for('login'))
 
-    # Fetch all data from the comparison_info table for the logged-in user
+    filter_type = request.args.get('filter_type', 'all')
+    start_date = request.args.get('start_date', datetime.now().strftime('%Y-%m-%d'))
+    end_date = request.args.get('end_date', datetime.now().strftime('%Y-%m-%d'))
+
     query = "SELECT * FROM comparison_info WHERE user_id = %s"
     params = [session['user_id']]
+
+    if filter_type == 'custom':
+        query += " AND DATE(uploaded_time) = %s"
+        params.append(start_date)
+    elif filter_type == 'from-to':
+        query += " AND DATE(uploaded_time) BETWEEN %s AND %s"
+        params.extend([start_date, end_date])
 
     cur = mysql.connection.cursor()
     try:
@@ -556,7 +555,8 @@ def statistics():
     finally:
         cur.close()
 
-    return render_template('statistics.html', stats=stats)
+    current_date = datetime.now().strftime('%Y-%m-%d')
+    return render_template('statistics.html', stats=stats, current_date=current_date)
 
 @app.route('/fetch_data', methods=['GET'])
 def fetch_data():
@@ -580,8 +580,6 @@ def fetch_data():
     cur.close()
 
     return jsonify(stats)
-
-
 @app.route('/change_username', methods=['GET', 'POST'])
 def change_username():
     if 'logged_in' in session and session['logged_in']:
@@ -639,7 +637,6 @@ def change_email():
     
     return redirect(url_for('profile'))
 
-
 @app.route('/change_password', methods=['POST'])
 def change_password():
     if 'logged_in' in session and session['logged_in']:
@@ -669,9 +666,7 @@ def change_password():
     else:
         flash('Please log in to view this page', 'danger')
     return redirect(url_for('profile'))
-
-
- 
+     
 @app.errorhandler(404)
 def page_not_found(e):
     return render_template('404.html'), 404
