@@ -7,13 +7,15 @@ from wtforms.validators import InputRequired, Length, EqualTo, Email, Regexp
 from email_validator import validate_email, EmailNotValidError 
 from werkzeug.security import generate_password_hash, check_password_hash
 from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.metrics import jaccard_score
 from transformers import BertTokenizer, BertModel
 import torch
 import fitz  # PyMuPDF
 import docx
 import os
 import chardet
-
+from langdetect import detect, DetectorFactory
  
 
 # Create the Flask application instance and specify the main templates folder
@@ -38,8 +40,16 @@ model_single.eval()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model_single.to(device)
 
+# Load the local BERT model and tokenizer
 tokenizer_double = BertTokenizer.from_pretrained('./bert_model')
 model_double = BertModel.from_pretrained('./bert_model')
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+model_double.to(device)
+
+def get_binary_representation(text, tokenizer):
+    tokens = tokenizer.tokenize(text)
+    unique_tokens = set(tokens)
+    return unique_tokens
 
 # Function to generate BERT embeddings for single document comparison
 def get_bert_embedding_single(text, tokenizer, model, device):
@@ -278,6 +288,17 @@ def singleComparison():
 
     return render_template('single.html')
 
+ 
+
+# Ensure the results are consistent by setting the seed
+DetectorFactory.seed = 0
+
+def detect_language(text):
+    try:
+        return detect(text)
+    except:
+        return None
+
 
 @app.route('/doubleComparison', methods=['GET', 'POST'])
 @login_required
@@ -291,36 +312,44 @@ def doubleComparison():
         similarity_results = None
         description = "Double document comparison"
 
-        # Check if both files are present
         if not file1 or not file2:
             errors = "Both files are required."
             update_comparison_stats(session['user_id'], 'double', False, True)
             return jsonify({"error": errors}), 400
 
-        # Validate file types
         if not allowed_file(file1.filename) or not allowed_file(file2.filename):
             errors = "Invalid file type. Only pdf, docx, and txt are allowed."
             update_comparison_stats(session['user_id'], 'double', False, True)
             return jsonify({"error": errors}), 400
 
-        # Read and process files
         try:
             text1, error1 = read_text_from_file(file1, file1.filename)
             text2, error2 = read_text_from_file(file2, file2.filename)
             if error1 or error2:
                 raise Exception(error1 or error2)
 
-            # Get embeddings and calculate similarity
-            embedding1 = get_bert_embedding_double(text1, tokenizer_double, model_double, device)
-            embedding2 = get_bert_embedding_double(text2, tokenizer_double, model_double, device)
-            similarity_score = cosine_similarity(embedding1.unsqueeze(0), embedding2.unsqueeze(0))[0][0]
-            similarity_results = round(similarity_score * 100, 2)
+            # Detect language of the documents and ensure they are both Somali
+            lang1 = detect_language(text1)
+            lang2 = detect_language(text2)
+            if lang1 != 'so' or lang2 != 'so':
+                raise Exception("Both documents must be in Somali.")
 
-            # Determine if documents are similar based on a threshold
+            text1_binary = get_binary_representation(text1, tokenizer_double)
+            text2_binary = get_binary_representation(text2, tokenizer_double)
+
+            # Convert sets to binary vectors
+            vectorizer = CountVectorizer(binary=True)
+            corpus = [' '.join(text1_binary), ' '.join(text2_binary)]
+            X = vectorizer.fit_transform(corpus).toarray()
+
+            # Calculate Jaccard similarity
+            jaccard_sim = jaccard_score(X[0], X[1])
+
+            similarity_results = round(jaccard_sim * 100, 2)
+
             threshold = 0.8
-            is_similar = similarity_score > threshold
+            is_similar = jaccard_sim > threshold
 
-            # Highlight text for comparison
             highlighted_text1, highlighted_text2 = highlight_text(text1, text2)
 
             results = {
@@ -335,7 +364,6 @@ def doubleComparison():
             success = True
             update_comparison_stats(session['user_id'], 'double', True, False)
 
-            # Insert data into database
             cur = mysql.connection.cursor()
             cur.execute("""
                 INSERT INTO comparison_info (user_id, comparison_type, document_name, document_format, attempts, success, errors, similarity_results, description)
@@ -353,7 +381,6 @@ def doubleComparison():
             return jsonify({"error": errors}), 400
 
     return render_template('double.html')
-
 
 # Authentication and user management routes
  
