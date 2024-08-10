@@ -16,6 +16,7 @@ import docx
 import os
 import chardet
 from langdetect import detect, DetectorFactory
+import difflib
  
 
 # Create the Flask application instance and specify the main templates folder
@@ -152,21 +153,39 @@ def read_text_from_file(file, filename):
 
 
 def highlight_text(text1, text2):
+    # Use difflib to identify the matching blocks of text
+    s = difflib.SequenceMatcher(None, text1.split(), text2.split())
+    matching_blocks = s.get_matching_blocks()
+
+    highlighted_text1 = []
+    highlighted_text2 = []
+
     words1 = text1.split()
     words2 = text2.split()
 
-    common_words = set(words1) & set(words2)
+    last_index1 = 0
+    last_index2 = 0
 
-    highlighted_text1 = " ".join([
-        f'<span class="common-word">{word}</span>' if word in common_words else f'<span class="different-word">{word}</span>'
-        for word in words1
-    ])
-    highlighted_text2 = " ".join([
-        f'<span class="common-word">{word}</span>' if word in common_words else f'<span class="different-word">{word}</span>'
-        for word in words2
-    ])
+    # Highlight matching phrases
+    for match in matching_blocks:
+        start1, start2, size = match
 
-    return highlighted_text1, highlighted_text2
+        # Add the non-matching parts
+        highlighted_text1.append(' '.join([f'<span class="different-word">{word}</span>' for word in words1[last_index1:start1]]))
+        highlighted_text2.append(' '.join([f'<span class="different-word">{word}</span>' for word in words2[last_index2:start2]]))
+
+        # Add the matching parts
+        highlighted_text1.append(' '.join([f'<span class="common-word">{word}</span>' for word in words1[start1:start1 + size]]))
+        highlighted_text2.append(' '.join([f'<span class="common-word">{word}</span>' for word in words2[start2:start2 + size]]))
+
+        last_index1 = start1 + size
+        last_index2 = start2 + size
+
+    # Add any remaining non-matching parts
+    highlighted_text1.append(' '.join([f'<span class="different-word">{word}</span>' for word in words1[last_index1:]]))
+    highlighted_text2.append(' '.join([f'<span class="different-word">{word}</span>' for word in words2[last_index2:]]))
+
+    return ' '.join(highlighted_text1), ' '.join(highlighted_text2)
 
 def login_required(f):
     @wraps(f)
@@ -178,6 +197,9 @@ def login_required(f):
     return decorated_function
 
 # Single document comparison routes
+# Fix random seed for consistency in langdetect
+DetectorFactory.seed = 0
+
 @app.route('/singleComparison', methods=['GET', 'POST'])
 @login_required
 def singleComparison():
@@ -208,6 +230,20 @@ def singleComparison():
                 if error:
                     raise Exception(error)
 
+                # Detect language and ensure it's Somali
+                detected_language = detect(new_document_text)
+                if detected_language != 'so':  # 'so' is the language code for Somali
+                    errors = f"Document is not in Somali language. Detected language: {detected_language}."
+                    # Insert error data into the comparison_info table
+                    cur = mysql.connection.cursor()
+                    cur.execute("""
+                        INSERT INTO comparison_info (user_id, comparison_type, document_name, document_format, attempts, success, errors, similarity_results, description)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """, (session['user_id'], 'single', document_name, document_format, attempts, False, errors, similarity_results, description))
+                    mysql.connection.commit()
+                    cur.close()
+                    return jsonify({"error": errors}), 400
+
                 # Process the document comparison
                 dataset_paths = [
                     'existing documents/Naftaydaay-Gacalo.txt',
@@ -215,15 +251,20 @@ def singleComparison():
                     'existing documents/NUUN.txt'
                 ]
                 existing_documents = load_existing_documents(dataset_paths)
-                new_doc_embedding = get_bert_embedding_single(new_document_text, tokenizer_single, model_single, device)
+
+                vectorizer = CountVectorizer(binary=True)
+                new_doc_vector = vectorizer.fit_transform([new_document_text])
 
                 similarities = []
                 for name, text in existing_documents:
-                    existing_doc_embedding = get_bert_embedding_single(text, tokenizer_single, model_single, device)
-                    similarity_score = cosine_similarity(
-                        new_doc_embedding.unsqueeze(0).cpu().numpy(),
-                        existing_doc_embedding.unsqueeze(0).cpu().numpy()
-                    )[0][0]
+                    existing_doc_vector = vectorizer.transform([text])
+                    
+                    # Calculate Jaccard similarity
+                    similarity_score = jaccard_score(
+                        new_doc_vector.toarray()[0],
+                        existing_doc_vector.toarray()[0],
+                        average='binary'
+                    )
                     similarities.append((name, similarity_score))
 
                 similarities_percent = [(name, round(similarity * 100, 2)) for name, similarity in similarities]
@@ -272,7 +313,6 @@ def singleComparison():
             return jsonify({"error": errors}), 400
 
     return render_template('single.html')
-
 
 
 # Ensure the results are consistent by setting the seed
@@ -526,37 +566,41 @@ from datetime import datetime
 from flask import render_template, request, session, flash
 
 @app.route('/statistics', methods=['GET', 'POST'])
+@login_required
 def statistics():
     if 'user_id' not in session:
         flash('Please log in to view your statistics', 'danger')
         return redirect(url_for('login'))
 
-    filter_type = request.args.get('filter_type', 'all')
-    start_date = request.args.get('start_date', datetime.now().strftime('%Y-%m-%d'))
-    end_date = request.args.get('end_date', datetime.now().strftime('%Y-%m-%d'))
-
-    query = "SELECT * FROM comparison_info WHERE user_id = %s"
-    params = [session['user_id']]
-
-    if filter_type == 'custom':
-        query += " AND DATE(uploaded_time) = %s"
-        params.append(start_date)
-    elif filter_type == 'from-to':
-        query += " AND DATE(uploaded_time) BETWEEN %s AND %s"
-        params.extend([start_date, end_date])
-
     cur = mysql.connection.cursor()
     try:
-        cur.execute(query, params)
-        stats = cur.fetchall()
+        # Fetch the most recent record for the user
+        cur.execute("""
+            SELECT * FROM comparison_info 
+            WHERE user_id = %s 
+            ORDER BY uploaded_time DESC 
+            LIMIT 1
+        """, [session['user_id']])
+        recent_stat = cur.fetchone()
+
+        # Fetch all statistics (optional, depending on your needs)
+        cur.execute("""
+            SELECT * FROM comparison_info 
+            WHERE user_id = %s 
+            ORDER BY uploaded_time DESC
+        """, [session['user_id']])
+        all_stats = cur.fetchall()
+
     except Exception as e:
-        flash(f'Error: {e}', 'danger')
-        stats = []
+        flash(f'Error fetching statistics: {e}', 'danger')
+        recent_stat = None
+        all_stats = []
+
     finally:
         cur.close()
 
-    current_date = datetime.now().strftime('%Y-%m-%d')
-    return render_template('statistics.html', stats=stats, current_date=current_date)
+    return render_template('statistics.html', recent_stat=recent_stat, stats=all_stats)
+
 
 @app.route('/fetch_data', methods=['GET'])
 def fetch_data():
